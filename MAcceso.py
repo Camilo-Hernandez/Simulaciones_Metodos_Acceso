@@ -1,8 +1,6 @@
 ## Importar librerias
 from scipy.stats import poisson, binom, expon	# Funciones que guardan todas las propiedades de la VA Poisson, Exponencial y Binomial
-from random import random, expovariate
 from math import exp
-from numpy import cumsum		# Creador de vectores acumulativos
 import matplotlib.pyplot as plt 	# Graficador
 
 ## ------------ ALOHA ranurado ------------ ##
@@ -30,37 +28,55 @@ donde: n='n', p='qr' (no confundir la variable 'n' con n que es uno de los dos p
 'n' decrece en 1 si no se generaron tramas nuevas en el anterior y hay un unico intento BL en el actual
 'g' es la tasa de intentos de transmision de tramas por slot: g = lamb + n*qr
 'Efc' es la eficiencia total del sistema entendida como la razon entre de tramas enviadas y las generadas
-'S' es la eficiencia entendida como la fraccion de los slots que contienen una Tx exitosa: S = g*exp(-g)
+'S'=P(1) es la eficiencia entendida como la fraccion de los slots que contienen una Tx exitosa: S = g*exp(-g)
 '''
-slots = 23				# Slots totales a analizar
-Exitos = 0                              # Slots o tramas con Tx exitosa
-n = [0]*slots			        # Cantidad inicial de nodos BL por slot (lista de ceros)
-qr = 0.3                                # Probabilidad de retransmision (constante)
-iBL = [0]*slots                         # Porciones iniciales de los n que intentan retransmitir
-lamb = 0.7				# Tasa media de generacion de tramas (constante)
-g = [0]*slots                           # Tasa inicial de Tx (varia por slot y es funcion de n)
-tramas = list(poisson.rvs(mu=lamb,size=slots))  # (En Python, la media se denota 'mu' en la funcion 'poisson.rvs()')
+slots = 5				# Slots totales a analizar
+
+## Eficiencia S en funcion de la probabilidad de retransmision qr
+# Parametros
+qr = [x/100 for x in range(5,101,5)]                               # Probabilidad de retransmision (constante)
+Exitos = [0]*len(qr)                              # Slots o tramas con Tx exitosa
+n = [[0]*slots]*len(qr)			        # Cantidad inicial de nodos BL por slot (lista de ceros)
+iBL = [[0]*slots]*len(qr)                         # Porciones iniciales de los n que intentan retransmitir
+g = [[0]*slots]*len(qr)                          # Tasa inicial de Tx (varia por slot y es funcion de n)
+Efc = [0]*len(qr)
+S = [0]*len(qr) 
+# Matriz de tramas por lambda
+lamb = [x/10 for x in range(1,21)]				# Tasa media de generacion de tramas (constante)
+tramas=[[0]]*len(lamb)
+for i in range(len(lamb)):
+    tramas[i] = list(poisson.rvs(mu=lamb[i],size=slots))  # (En Python, la media se denota 'mu' en la funcion 'poisson.rvs()')
+
+
+# Ciclo que calcula la variacion de S segun qr
 # Ciclo que calcula 'n' e 'iBL' en el slot actual
 # 'iBL' es aleatorio segun los 'n' que hayan acumulados hasta el slot anterior
 # 'n' se calcula segun las 'tramas' el anterior slot y los 'iBL' en el slot actual
-for i in range(slots):
-    if i==0: continue
-    iBL[i] = binom.rvs(n=n[i-1],p=qr)
-    if tramas[i-1]+iBL[i]>1:
-        n[i]=n[i-1]+tramas[i-1]                 # n aumenta en la cantidad de tramas generadas en el anterior debido a colision
-    elif tramas[i-1]==1 and iBL[i]==0:
-        Exitos += 1
-        n[i]=n[i-1]                              # +1 slot con Tx de trama exitosa. Y n no cambia
-    elif tramas[i-1]==0 and iBL[i]==1:
-        Exitos += 1
-        n[i]=n[i-1]-1	                        # +1 slot con Tx de trama exitosa. Y n disminuye en 1
-    elif tramas[i-1]==0 and iBL[i]==0: 
-        n[i]=n[i-1]
-Efc = Exitos / sum(tramas) * 100
-g = [x+lamb for x in binom.mean(n,qr)]
-P1 = [x*exp(-x)*100 for x in g]		        # Probabilidad de tener un unico envio de trama (exito)
-print('De ',sum(tramas),' tramas generadas, se enviaron ',Exitos,'. La eficiencia del sistema fue del ',"%.2f" % Efc,'%.', sep='')
+lam=0.6
+tram=tramas[lamb.index(lam)]
+for i in range(len(qr)):
+    for j in range(slots):
+        if j==0: continue   # Ignorar el primer slot actual para tener en cuenta el anterior
+        iBL[i][j] = binom.rvs(n=n[i][j-1],p=qr[i])
+        if tram[j-1]+iBL[i][j]>1:
+            n[i][j]=n[i][j-1]+tram[j-1]                 # n aumenta en la cantidad de tramas generadas en el anterior debido a colision
+        elif tram[j-1]==1 and iBL[i][j]==0:
+            Exitos[i] += 1
+            n[i][j]=n[i][j-1]                             # +1 slot con Tx exitosa. Y n no cambia
+        elif tram[j-1]==0 and iBL[i][j]==1:
+            Exitos[i] += 1
+            n[i][j]=n[i][j-1]-1	                        # +1 slot con Txexitosa. Y n disminuye en 1
+        elif tram[j-1]==0 and iBL[i][j]==0: 
+            n[i][j]=n[i][j-1]
+    Efc[i] = Exitos[i] / sum(tramas[i]) * 100
+    for i in range(len(qr)):
+        for j in range(slots):
+            g[i][j] = lam + n[i][j]*qr[i]
+            S[i] = g[i][j]*exp(-g[i][j])
 
+
+#print('De ',sum(tramas),' tramas generadas, se enviaron ',Exitos,'. El ',"%.2f" % Efc,'%.', sep='')
+#print('En promedio, la fraccion de slots que contienen una Tx exitosa es: P(1) = ',"%.2f" % average(P1),'%', sep='')
 ## Grafica de barras
 #width = 0.6  # the width of the bars
 
