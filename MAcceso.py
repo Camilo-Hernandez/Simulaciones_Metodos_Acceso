@@ -32,31 +32,34 @@ donde: n='n', p='qr' (no confundir la variable 'n' con n que es uno de los dos p
 'Efc' es la eficiencia total del sistema entendida como la razon entre de tramas enviadas y las generadas
 'S' es la eficiencia entendida como la fraccion de los slots que contienen una Tx exitosa: S = g*exp(-g)
 '''
-slots = 15				# Slots totales a analizar
+slots = 23				# Slots totales a analizar
 Exitos = 0                              # Slots o tramas con Tx exitosa
 n = [0]*slots			        # Cantidad inicial de nodos BL por slot (lista de ceros)
-qr = 0.2                                # Probabilidad de retransmision (constante)
+qr = 0.3                                # Probabilidad de retransmision (constante)
 iBL = [0]*slots                         # Porciones iniciales de los n que intentan retransmitir
-lamb = 0.5				# Tasa media de generacion de tramas (constante)
+lamb = 0.7				# Tasa media de generacion de tramas (constante)
 g = [0]*slots                           # Tasa inicial de Tx (varia por slot y es funcion de n)
 tramas = list(poisson.rvs(mu=lamb,size=slots))  # (En Python, la media se denota 'mu' en la funcion 'poisson.rvs()')
 # Ciclo que calcula 'n' e 'iBL' en el slot actual
 # 'iBL' es aleatorio segun los 'n' que hayan acumulados hasta el slot anterior
 # 'n' se calcula segun las 'tramas' el anterior slot y los 'iBL' en el slot actual
 for i in range(slots):
+    if i==0: continue
     iBL[i] = binom.rvs(n=n[i-1],p=qr)
     if tramas[i-1]+iBL[i]>1:
         n[i]=n[i-1]+tramas[i-1]                 # n aumenta en la cantidad de tramas generadas en el anterior debido a colision
-    elif (tramas[i-1]==1 and iBL[i]==0):
-        Exitos += 1                              # +1 slot con Tx de trama exitosa. Y n no cambia
+    elif tramas[i-1]==1 and iBL[i]==0:
+        Exitos += 1
+        n[i]=n[i-1]                              # +1 slot con Tx de trama exitosa. Y n no cambia
     elif tramas[i-1]==0 and iBL[i]==1:
         Exitos += 1
         n[i]=n[i-1]-1	                        # +1 slot con Tx de trama exitosa. Y n disminuye en 1
-
-Efc = Exitos / sum(tramas)
+    elif tramas[i-1]==0 and iBL[i]==0: 
+        n[i]=n[i-1]
+Efc = Exitos / sum(tramas) * 100
 g = [x+lamb for x in binom.mean(n,qr)]
 P1 = [x*exp(-x)*100 for x in g]		        # Probabilidad de tener un unico envio de trama (exito)
-print('De ',sum(tramas),' tramas generadas, se enviaron ',Exitos,'. La eficiencia del sistema fue del ',Efc,'%.', sep='')
+print('De ',sum(tramas),' tramas generadas, se enviaron ',Exitos,'. La eficiencia del sistema fue del ',"%.2f" % Efc,'%.', sep='')
 
 ## Grafica de barras
 #width = 0.6  # the width of the bars
