@@ -1,7 +1,15 @@
 ## Importar librerias
+'''
+Este programa ealiza graficas de la eficiencia del ALOHA ranurado
+en funcion de la probabilidad de retransmision de los nodos backlogged
+y la tasa media de generacion de tramas en la red
+2 eficiencias se calculan: S y Efc
+'''
 from scipy.stats import poisson, binom, expon	# Funciones que guardan todas las propiedades de la VA Poisson, Exponencial y Binomial
 from math import exp
-import matplotlib.pyplot as plt 	# Graficador
+import pylab as pl; import numpy as np
+from mpl_toolkits.mplot3d import Axes3D         # Para hacer graficas en el espacio 3D.
+
 
 ## ------------ ALOHA ranurado ------------ ##
 '''
@@ -33,11 +41,10 @@ donde: n='n', p='qr' (no confundir la variable 'n' con n que es uno de los dos p
 '''
 slots = 5				# Slots totales a analizar
 print("Slots: ",slots)
-## Eficiencia S en funcion de la probabilidad de retransmision qr
 # Parametros
-lamb = [x/10 for x in range(7,12)]				# Vector de tasas medias de generacion de tramas
+lamb = [x/10 for x in range(1,21)]				# Vector de tasas medias de generacion de tramas
 tramas = [list(poisson.rvs(mu=i,size=slots)) for i in lamb]     # Tramas generadas aleatoriamente por slot por cada tasa del vector lamb
-qr = [x/100 for x in range(1,101,25)]                           # Vector de probabilidades de retransmision de los nodos BL
+qr = [x/100 for x in range(1,101,2)]                           # Vector de probabilidades de retransmision de los nodos BL
 n = [[[0 for x in range(slots)] for y in range(len(qr))] for z in range(len(lamb))] # Cantidad inicial de nodos BL por slot para cada qr y cada lambda
 iBL = [[[0 for x in range(slots)] for y in range(len(qr))] for z in range(len(lamb))] # Porciones iniciales de los n que intentan retransmitir en cada slot
 g = [[[0 for x in range(slots)] for y in range(len(qr))] for z in range(len(lamb))] # Tasa de Tx (funcion de n)
@@ -64,31 +71,21 @@ for k in range(len(lamb)):
             elif tram[j-1]==0 and iBL[k][i][j]==0:
                 n[k][i][j]=n[k][i][j-1]
 
-#Efc = [[100*y*sum(k) for y,k in zip(x,tramas)] for x in Exitos]
-#g = [[lam + n * m for n in x] for x,m in zip(n,qr)]     # g = constante lam + matriz n .* vector qr
-#S = [100*sum(x*exp(-x) for x in row)/slots for row in g]
+Efc = [[y1/sum(x2) for y1 in x1] for x1,x2 in zip(Exitos,tramas)]
+g = [[[lam + q * nBL for nBL in nx] for nx,q in zip(nlam,qr)] for lam, nlam in zip(lamb,n)]     # g = constante lam + matriz n .* vector qr
+S = [[100*sum(x*exp(-x) for x in row)/slots for row in glmatrix] for glmatrix in g]
 
-plt.plot(qr,S)
-plt.plot(qr,Efc)
-plt.title("Eficiencias segun la probabilidad de retransmision de los nodos backlogged para un lambda dado")
-plt.xlabel("Probabilidad qr")
-plt.ylabel("S(g(n)) - Efc(tramas enviadas)")
-plt.legend(["S= g(n)*exp{-g(n)}","Efc = Enviadas/Generadas"])
-plt.show()
+fig = pl.figure(); ax = Axes3D(fig)
+X,Y=np.meshgrid(np.array(lamb),np.array(qr))
+Z = np.array(S).T
+ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pl.cm.winter)
+ax.set_title("Eficiencias segun la probabilidad de retransmision de los nodos BL y la tasa media de generacion de tramas")
+ax.set_xlabel('Tasa media lambda', fontsize=15)
+ax.set_ylabel('Probabilidad qr',fontsize=15)
+ax.set_zlabel('S = g(n)*exp{-g(n)}',fontsize=15)
 
-## Grafica de barras
-#width = 0.6  # the width of the bars
-
-#fig, ax = plt.subplots()
-##rects1 = ax.bar(slots - width/2, S, width, label='Men')
-#rects2 = ax.bar(slots + width/2, nlist, width, label='Women')
-
-## Add some text for labels, title and custom x-axis tick labels, etc.
-##ax.set_ylabel('Scores')
-#ax.set_title('Aloha ranurado con 30 nodos')
-##ax.set_xticks(x)
-#ax.set_xticklabels(slots)
-#ax.legend()
+#ax.set_legend("S= g(n)*exp{-g(n)}")
+pl.show()
 
 
 ## Aloha no ranurado
