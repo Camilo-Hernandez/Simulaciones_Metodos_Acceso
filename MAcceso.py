@@ -82,9 +82,16 @@ ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pl.cm.winter)
 ax.set_title("Eficiencias segun la probabilidad de retransmision de los nodos BL y la tasa media de generacion de tramas")
 ax.set_xlabel('Tasa media lambda', fontsize=15)
 ax.set_ylabel('Probabilidad qr',fontsize=15)
-ax.set_zlabel('S = g(n)*exp{-g(n)}',fontsize=15)
+ax.set_zlabel('S = %g(n)*exp{-g(n)}',fontsize=15)
+pl.show()
 
-#ax.set_legend("S= g(n)*exp{-g(n)}")
+fig = pl.figure(); ax = Axes3D(fig)
+Z = np.array(Efc).T
+ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pl.cm.summer)
+ax.set_title("Eficiencias segun la probabilidad de retransmision de los nodos BL y la tasa media de generacion de tramas")
+ax.set_xlabel('Tasa media lambda', fontsize=15)
+ax.set_ylabel('Probabilidad qr',fontsize=15)
+ax.set_zlabel('Efc = %Enviadas/Generadas',fontsize=15)
 pl.show()
 
 
