@@ -1,8 +1,8 @@
 '''
-Este programa ealiza graficas de la eficiencia del ALOHA ranurado
+Este programa realiza graficas de la eficiencia del ALOHA ranurado
 en funcion de la probabilidad de retransmision de los nodos backlogged
 y la tasa media de generacion de tramas en la red
-2 eficiencias se calculan: S y Efc
+2 eficiencias se calculan: S=g*exp(-g) y Efc=Tramas enviadas/generadas
 '''
 ## Importar librerias
 from scipy.stats import poisson, binom	# Funciones que guardan todas las propiedades de la VA Poisson y Binomial
@@ -50,8 +50,7 @@ El programa crea las graficas en el espacio 3D de ambas eficiencias en funcion d
 ## ------------ Algoritmo ------------ ##
 
 # Parametros
-slots = 5							# Slots totales a analizar
-print("Slots: ",slots)
+slots = int(input('Ingrese la cantidad de slots que quiere analizar (no mas de 200 para que no se pete el pc): '))							# Slots totales a analizar
 lamb = [x/10 for x in range(1,21)]				# Vector de tasas medias de generacion de tramas
 tramas = [list(poisson.rvs(mu=i,size=slots)) for i in lamb]     # Tramas generadas aleatoriamente por slot por cada tasa del vector lamb
 qr = [x/100 for x in range(1,101,2)]                           	# Vector de probabilidades de retransmision de los nodos BL
@@ -83,29 +82,29 @@ for k in range(len(lamb)):
             elif tram[j-1]==0 and iBL[k][i][j]==0:		# Condicion 1 para que 'n' no cambie
                 n[k][i][j]=n[k][i][j-1]
 
-Efc = [[y1/sum(x2) for y1 in x1] for x1,x2 in zip(Exitos,tramas)] # Tramas enviadas/tramas generadas
+Efc = [[100*y1/sum(x2) for y1 in x1] for x1,x2 in zip(Exitos,tramas)] # Tramas enviadas/tramas generadas
 g = [[[lam + q * nBL for nBL in nx] for nx,q in zip(nlam,qr)] for lam, nlam in zip(lamb,n)]
 S = [[100*sum(x*exp(-x) for x in row)/slots for row in glmatrix] for glmatrix in g] # S = promedio(g*exp(-g))
 
 ## ------------ Graficas de las eficiencias en funcion de los vectores 'lamb' y 'qr' ------------ ##
-
+# Puede cambiar el mapa de colores de la superficie poniendo el cmap que quiera
 # Superficie S
 fig = pl.figure(); ax = Axes3D(fig)
 X,Y=np.meshgrid(np.array(lamb),np.array(qr))
 Z = np.array(S).T
-ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pl.cm.winter)
-ax.set_title("Eficiencia S del ALOHA Ranurado")
+ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pl.cm.copper)
+ax.set_title('Eficiencia S del ALOHA Ranurado')
 ax.set_xlabel('Tasa media lambda', fontsize=15)
 ax.set_ylabel('Probabilidad qr',fontsize=15)
-ax.set_zlabel('S = %prom[g(n)*exp{-g(n)}]',fontsize=11)
+ax.set_zlabel('S = %prom[g(n)*exp{-g(n)}]',fontsize=11,rotation=0)
 pl.show()
 
 # Superficie Efc
 fig = pl.figure(); ax = Axes3D(fig)
 Z = np.array(Efc).T
-ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pl.cm.summer)
-ax.set_title("Eficiencia Efc")
+ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pl.cm.copper)
+ax.set_title('Eficiencia Efc del ALOHA Ranurado')
 ax.set_xlabel('Tasa media lambda', fontsize=15)
 ax.set_ylabel('Probabilidad qr',fontsize=15)
-ax.set_zlabel('Efc = %Enviadas/Generadas',fontsize=15)
+ax.set_zlabel('Efc = %Enviadas/Generadas',fontsize=15,rotation=40)
 pl.show()
